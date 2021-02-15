@@ -1,49 +1,44 @@
 const express = require("express")
+const parser = require("body-parser")
 const { Client } = require('elasticsearch')
 const esClient = new Client({ node: 'http://localhost:9200' })
 const app = express()
 
+app.use(parser.json())
 
 var settings = {
   "index": {
     "analysis": {
-      "filter": {},
-      "analyzer": {
-        "analyzer_keyword": {
-          "tokenizer": "keyword",
-          "filter": "lowercase"
+        "filter": {
+            "autocomplete_filter": {
+                "type":     "edge_ngram",
+                "min_gram": 2,
+                "max_gram": 20
+            }
         },
-        "edge_ngram_analyzer": {
-          "filter": [
-            "lowercase"
-          ],
-          "tokenizer": "edge_ngram_tokenizer"
-        }
-      },
-      "tokenizer": {
-        "edge_ngram_tokenizer": {
-          "type": "edge_ngram",
-          "min_gram": 2,
-          "max_gram": 7,
-          "token_chars": [
-            "letter"
-          ]
-        }
-      }
+        "analyzer": {
+            "autocomplete": {
+                "type": "custom",
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "autocomplete_filter" 
+                ]
+            }
+        },
     }
   }
 }
 
 var mapping = {
- 
     "properties": {
       "username":{
         "type": "text",
-        "analyzer": "edge_ngram_analyzer"
+        "analyzer": "autocomplete"
       },
       "fullName": {
         "type": "text",
-        "analyzer": "edge_ngram_analyzer"
+        "analyzer": "autocomplete"
       },
       "userId": {
         "type": "text"
@@ -52,7 +47,6 @@ var mapping = {
         "type": "date"
       }
     }
-
 }
 
 esClient.indices.create({
@@ -68,6 +62,7 @@ esClient.indices.create({
 // })
 
 app.post("/users", (req, res) => {
+
   esClient.index({
     index: 'users',
     body: {
@@ -85,6 +80,7 @@ app.post("/users", (req, res) => {
     })
 })
 
+
 app.get("/users", (req, res) => {
   const searchText = req.query.text
   esClient.search({
@@ -93,7 +89,8 @@ app.get("/users", (req, res) => {
       query: {
         multi_match: { 
           query:  searchText.trim(),
-          fields : ['username', 'fullName']
+          fields : ['username', 'fullName'],
+          analyzer : "standard"
         }
       },
       sort: ["_score", {"createdDate": "desc"}]
@@ -110,4 +107,3 @@ app.get("/users", (req, res) => {
 app.listen(process.env.PORT || 3000, () => {
   console.log("connected")
 })
-

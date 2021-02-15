@@ -1,14 +1,14 @@
-###customer indexing
+###user indexing
 POST http://localhost:3000/users
 Content-Type: application/json
 
 {
-  "username": "someone",
-  "fullName": "Dracula",
+  "username": "akshita",
+  "fullName": "Akshita Upadhyay",
   "userId": "1"
 }
 
-###customer search
-GET http://localhost:3000/users?text="soph"
+###user search
+GET http://localhost:3000/users?text="ak"
 Content-Type: application/json
 
